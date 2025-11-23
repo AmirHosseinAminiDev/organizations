@@ -15,17 +15,16 @@ class DeductionFile extends Model
         'month',
         'original_name',
         'stored_path',
+        'status',
     ];
 
-    public function organization(): BelongsTo
+    public function organization()
     {
         return $this->belongsTo(Organization::class);
     }
 
-    public function items(): HasMany
+    public function items()
     {
         return $this->hasMany(DeductionItem::class);
     }
-
-
 }

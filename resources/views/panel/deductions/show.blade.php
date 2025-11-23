@@ -2,16 +2,15 @@
 
 @php
     use Morilog\Jalali\Jalalian;
+    use App\Enum\UserRoleEnum;
+
+    $authUser   = auth()->user();
+    $isOrgAdmin = $authUser->role->name === UserRoleEnum::ORGANIZATION_ADMIN->value;
 @endphp
 
 @section('content')
     <div class="container mt-5">
-        <h2 class="mb-4">
-            جزئیات فایل کسورات
-            @if($file->title)
-                ({{ $file->title }})
-            @endif
-        </h2>
+        <h2 class="mb-4">جزئیات فایل کسورات</h2>
 
         @if(session('success'))
             <div class="alert alert-success">
@@ -34,54 +33,53 @@
                 اطلاعات کلی فایل
             </div>
             <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-md-3 mb-2">
+                        <strong>سازمان:</strong>
+                        <span class="ms-1">{{ $file->organization->name ?? '-' }}</span>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <strong>سال:</strong>
+                        <span class="ms-1">{{ $file->year }}</span>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <strong>ماه:</strong>
+                        <span class="ms-1">{{ $file->month }}</span>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <strong>وضعیت فایل:</strong>
+                        <span class="ms-1">
+                            @if($file->status == 1)
+                                <span class="badge bg-success">فعال</span>
+                            @else
+                                <span class="badge bg-secondary">غیرفعال</span>
+                            @endif
+                        </span>
+                    </div>
+                </div>
 
-                <dl class="row mb-2">
-                    <dt class="col-md-2 text-md-end text-start mb-2 mb-md-0">سازمان:</dt>
-                    <dd class="col-md-4 text-start mb-2 mb-md-0">
-                        {{ $file->organization->name ?? '-' }}
-                    </dd>
-
-                    <dt class="col-md-2 text-md-end text-start mb-2 mb-md-0">نام فایل:</dt>
-                    <dd class="col-md-4 text-start mb-2 mb-md-0">
-                        {{ $file->original_name }}
-                    </dd>
-                </dl>
-
-                <hr class="my-3">
-
-                <dl class="row mb-2">
-                    <dt class="col-md-2 text-md-end text-start mb-2 mb-md-0">سال:</dt>
-                    <dd class="col-md-4 text-start mb-2 mb-md-0">
-                        {{ $file->year }}
-                    </dd>
-
-                    <dt class="col-md-2 text-md-end text-start mb-2 mb-md-0">ماه:</dt>
-                    <dd class="col-md-4 text-start mb-2 mb-md-0">
-                        {{ $file->month }}
-                    </dd>
-                </dl>
-
-                <hr class="my-3">
-
-                <dl class="row mb-0">
-                    <dt class="col-md-2 text-md-end text-start mb-2 mb-md-0">تاریخ ایجاد:</dt>
-                    <dd class="col-md-4 text-start mb-2 mb-md-0">
-                        {{ Jalalian::fromDateTime($file->created_at)->format('Y/m/d H:i') }}
-                    </dd>
-
-                    <dt class="col-md-2 text-md-end text-start mb-2 mb-md-0">تعداد رکوردها:</dt>
-                    <dd class="col-md-4 text-start mb-2 mb-md-0">
-                        {{ $items->count() }}
-                    </dd>
-                </dl>
-
+                <div class="row mb-2">
+                    <div class="col-md-4 mb-2">
+                        <strong>نام فایل:</strong>
+                        <span class="ms-1">{{ $file->original_name }}</span>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <strong>تاریخ ایجاد:</strong>
+                        <span class="ms-1">
+                            {{ Jalalian::fromDateTime($file->created_at)->format('Y/m/d H:i') }}
+                        </span>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <strong>تعداد رکوردها:</strong>
+                        <span class="ms-1">{{ $items->count() }}</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-
-    @if($items->isEmpty())
+        @if($items->isEmpty())
             <div class="alert alert-info">
-                هیچ رکوردی برای این فایل ثبت نشده است.
+                هیچ رکورد کسوراتی در این فایل ثبت نشده است.
             </div>
         @else
             <div class="card">
@@ -94,20 +92,119 @@
                             <thead class="table-dark">
                             <tr>
                                 <th>#</th>
+                                <th>نام</th>
+                                <th>نام خانوادگی</th>
                                 <th>کد ملی</th>
                                 <th>کد پرسنلی</th>
                                 <th>مبلغ (ریال)</th>
-                                <th>تاریخ ثبت</th>
+                                <th>وضعیت کاربر</th>
+                                <th>توضیحات وضعیت</th>
+                                @if($isOrgAdmin)
+                                    <th>عملیات</th>
+                                @endif
                             </tr>
                             </thead>
                             <tbody>
                             @foreach($items as $index => $item)
+                                @php
+                                    $user = $item->user;
+                                    $status = $user->employment_status ?? null;
+                                @endphp
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
+                                    <td>{{ $user->name ?? '-' }}</td>
+                                    <td>{{ $user->last_name ?? '-' }}</td>
                                     <td>{{ $item->national_code }}</td>
                                     <td>{{ $item->personnel_code ?? '-' }}</td>
                                     <td>{{ number_format($item->amount) }}</td>
-                                    <td>{{ Jalalian::fromDateTime($item->created_at)->format('Y/m/d') }}</td>
+                                    <td>
+                                        @if(!$status || $status == 0)
+                                            <span class="badge bg-success">فعال</span>
+                                        @elseif($status == 1)
+                                            <span class="badge bg-warning text-dark">ترک کار</span>
+                                        @elseif($status == 2)
+                                            <span class="badge bg-dark">فوت</span>
+                                        @elseif($status == 3)
+                                            <span class="badge bg-info text-dark">انتقالی</span>
+                                        @elseif($status == 4)
+                                            <span class="badge bg-primary">بازنشسته</span>
+                                        @else
+                                            <span class="badge bg-secondary">نامشخص</span>
+                                        @endif
+                                    </td>
+                                    <td>{{ $user->employment_status_description ?? '-' }}</td>
+
+                                    @if($isOrgAdmin)
+                                        <td>
+                                            @if($user)
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                            type="button" data-bs-toggle="dropdown">
+                                                        عملیات
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+
+                                                        <li>
+                                                            <form method="POST"
+                                                                  action="{{ route('deductions.users.employment-status.update') }}"
+                                                                  class="px-3 py-1">
+                                                                @csrf
+                                                                <input type="hidden" name="user_id"
+                                                                       value="{{ $user->id }}">
+                                                                <input type="hidden" name="status"
+                                                                       value="left">
+                                                                <button type="submit" class="btn btn-link p-0">
+                                                                    ترک کار
+                                                                </button>
+                                                            </form>
+                                                        </li>
+
+                                                        <li>
+                                                            <form method="POST"
+                                                                  action="{{ route('deductions.users.employment-status.update') }}"
+                                                                  class="px-3 py-1">
+                                                                @csrf
+                                                                <input type="hidden" name="user_id"
+                                                                       value="{{ $user->id }}">
+                                                                <input type="hidden" name="status"
+                                                                       value="dead">
+                                                                <button type="submit" class="btn btn-link p-0">
+                                                                    فوت
+                                                                </button>
+                                                            </form>
+                                                        </li>
+
+                                                        <li>
+                                                            <form method="POST"
+                                                                  action="{{ route('deductions.users.employment-status.update') }}"
+                                                                  class="px-3 py-1">
+                                                                @csrf
+                                                                <input type="hidden" name="user_id"
+                                                                       value="{{ $user->id }}">
+                                                                <input type="hidden" name="status"
+                                                                       value="retired">
+                                                                <button type="submit" class="btn btn-link p-0">
+                                                                    بازنشسته
+                                                                </button>
+                                                            </form>
+                                                        </li>
+
+                                                        <li><hr class="dropdown-divider"></li>
+
+                                                        <li>
+                                                            <button type="button"
+                                                                    class="dropdown-item btn-transfer-user"
+                                                                    data-user-id="{{ $user->id }}">
+                                                                انتقالی (با توضیحات)
+                                                            </button>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            @else
+                                                <span class="text-muted">کاربر یافت نشد</span>
+                                            @endif
+                                        </td>
+                                    @endif
                                 </tr>
                             @endforeach
                             </tbody>
@@ -118,7 +215,54 @@
         @endif
 
         <div class="mt-3">
-            <a href="{{ route('deductions.files.index') }}" class="btn btn-secondary">بازگشت به لیست فایل‌ها</a>
+            <a href="{{ url()->previous() }}" class="btn btn-secondary">بازگشت</a>
         </div>
     </div>
+
+    @if($isOrgAdmin)
+        <form id="transferUserForm" method="POST"
+              action="{{ route('deductions.users.employment-status.update') }}"
+              style="display:none;">
+            @csrf
+            <input type="hidden" name="user_id">
+            <input type="hidden" name="status" value="transferred">
+            <input type="hidden" name="description">
+        </form>
+    @endif
 @endsection
+
+@push('js')
+    @if($isOrgAdmin)
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                document.querySelectorAll('.btn-transfer-user').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        const userId = this.getAttribute('data-user-id');
+
+                        Swal.fire({
+                            title: 'ثبت وضعیت انتقالی',
+                            input: 'textarea',
+                            inputLabel: 'توضیحات',
+                            inputPlaceholder: 'توضیحات انتقال را وارد کنید...',
+                            inputAttributes: {
+                                'aria-label': 'توضیحات انتقال'
+                            },
+                            showCancelButton: true,
+                            confirmButtonText: 'ثبت',
+                            cancelButtonText: 'انصراف',
+                            reverseButtons: true
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                const form = document.getElementById('transferUserForm');
+                                form.querySelector('input[name="user_id"]').value = userId;
+                                form.querySelector('input[name="description"]').value = result.value || '';
+                                form.submit();
+                            }
+                        });
+                    });
+                });
+            });
+        </script>
+    @endif
+@endpush

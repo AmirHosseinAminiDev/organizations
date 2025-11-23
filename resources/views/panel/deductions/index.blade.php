@@ -50,6 +50,7 @@
                                 <th>سال</th>
                                 <th>ماه</th>
                                 <th>نام فایل</th>
+                                <th>وضعیت</th>
                                 <th>تاریخ ایجاد</th>
                                 <th>تعداد رکوردها</th>
                                 <th>عملیات</th>
@@ -64,20 +65,40 @@
                                     <td>{{ $file->year }}</td>
                                     <td>{{ $file->month }}</td>
                                     <td>{{ $file->original_name }}</td>
+                                    <td>
+                                        @if($file->status == 1)
+                                            <span class="badge bg-success">فعال</span>
+                                        @else
+                                            <span class="badge bg-secondary">غیرفعال</span>
+                                        @endif
+                                    </td>
                                     <td>{{ Jalalian::fromDateTime($file->created_at)->format('Y/m/d H:i') }}</td>
                                     <td>{{ $file->items_count }}</td>
                                     <td>
                                         <div class="d-flex justify-content-center gap-1">
-                                            <a href="{{ route('deductions.files.show', $file) }}" class="btn btn-sm btn-info">
+
+                                            <a href="{{ route('deductions.files.show', $file) }}"
+                                               class="btn btn-sm btn-info">
                                                 مشاهده جزئیات
                                             </a>
 
-                                            <a href="{{ route('deductions.files.export', $file) }}" class="btn btn-sm btn-success">
+                                            <a href="{{ route('deductions.files.export', $file) }}"
+                                               class="btn btn-sm btn-success">
                                                 خروجی اکسل
                                             </a>
+
+                                            <form action="{{ route('deductions.files.toggle-status', $file) }}"
+                                                  method="POST" class="d-inline">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit"
+                                                        class="btn btn-sm {{ $file->status ? 'btn-outline-secondary' : 'btn-outline-primary' }}">
+                                                    {{ $file->status ? 'غیرفعال کردن' : 'فعال کردن' }}
+                                                </button>
+                                            </form>
+
                                         </div>
                                     </td>
-
                                 </tr>
                             @endforeach
                             </tbody>

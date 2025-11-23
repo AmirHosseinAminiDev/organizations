@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DeductionFile;
 use App\Models\DeductionItem;
 use App\Models\Organization;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -20,9 +21,9 @@ class DeductionController extends Controller
     {
         $authUser = Auth::user();
 
-        if ($authUser->role->name !== UserRoleEnum::OPERATOR->value) {
-            abort(403, 'فقط کاربر اپراتور به این بخش دسترسی دارد.');
-        }
+//        if ($authUser->role->name !== UserRoleEnum::OPERATOR->value) {
+//            abort(403, 'فقط کاربر اپراتور به این بخش دسترسی دارد.');
+//        }
 
         $files = DeductionFile::query()
             ->with('organization')
@@ -32,6 +33,7 @@ class DeductionController extends Controller
 
         return view('panel.deductions.index', compact('files'));
     }
+
 
     public function create()
     {
@@ -158,15 +160,28 @@ class DeductionController extends Controller
     public function show(DeductionFile $file)
     {
         $authUser = Auth::user();
+        $roleName = $authUser->role->name;
 
-        if ($authUser->role->name !== UserRoleEnum::OPERATOR->value) {
-            abort(403, 'فقط کاربر اپراتور به این بخش دسترسی دارد.');
+        if ($roleName === UserRoleEnum::OPERATOR->value) {
+        } elseif (
+            $roleName === UserRoleEnum::ORGANIZATION_ADMIN->value &&
+            $file->organization_id == $authUser->organization_id
+        ) {
+
+        } else {
+            abort(403, 'شما به این فایل دسترسی ندارید.');
         }
 
-        $items = $file->items()->orderBy('id')->get();
+        $file->load('organization');
+
+        $items = $file->items()
+            ->with('user')
+            ->orderBy('id')
+            ->get();
 
         return view('panel.deductions.show', compact('file', 'items'));
     }
+
 
     public function export(DeductionFile $file)
     {
@@ -208,5 +223,60 @@ class DeductionController extends Controller
 
         return Excel::download($export, $fileName);
     }
+
+    public function updateUserEmploymentStatus(Request $request)
+    {
+        $authUser = Auth::user();
+
+        if ($authUser->role->name !== UserRoleEnum::ORGANIZATION_ADMIN->value) {
+            abort(403, 'فقط مدیر سازمان مجاز به تغییر وضعیت پرسنل است.');
+        }
+
+        $data = $request->validate([
+            'user_id'     => 'required|exists:users,id',
+            'status'      => 'required|in:left,dead,transferred,retired',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        $user = User::query()->where('id', $data['user_id'])
+            ->where('organization_id', $authUser->organization_id)
+            ->firstOrFail();
+
+        $map = [
+            'left'        => 1, // ترک کار
+            'dead'        => 2, // فوت
+            'transferred' => 3, // انتقالی
+            'retired'     => 4, // بازنشسته
+        ];
+
+        $user->employment_status = $map[$data['status']];
+        $user->employment_status_description =
+            $data['status'] === 'transferred'
+                ? ($data['description'] ?? null)
+                : ($data['description'] ?? $user->employment_status_description);
+
+        $user->save();
+
+        return back()->with('success', 'وضعیت کاربر با موفقیت به‌روزرسانی شد.');
+    }
+
+    public function toggleStatus(DeductionFile $file)
+    {
+        $authUser = Auth::user();
+
+        if ($authUser->role->name !== UserRoleEnum::OPERATOR->value) {
+            abort(403, 'فقط کاربر اپراتور به این بخش دسترسی دارد.');
+        }
+
+        $file->status = $file->status ? 0 : 1;
+        $file->save();
+
+        $message = $file->status
+            ? 'فایل کسورات به حالت فعال تغییر کرد.'
+            : 'فایل کسورات به حالت غیرفعال تغییر کرد.';
+
+        return back()->with('success', $message);
+    }
+
 
 }

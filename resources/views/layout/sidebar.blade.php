@@ -108,7 +108,7 @@
                 use App\Enum\UserRoleEnum;
             @endphp
 
-            @if(auth()->user()->role->name === UserRoleEnum::OPERATOR->value)
+            @if(auth()->user()->role->name === UserRoleEnum::OPERATOR->value || auth()->user()->role->name === UserRoleEnum::ORGANIZATION_ADMIN->value)
                 <li class="nav-item nav-category">کسورات</li>
                 <li class="nav-item">
                     <a class="nav-link {{ $onDeductions ? 'active' : 'collapsed' }}"

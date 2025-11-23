@@ -8,7 +8,7 @@ use App\Http\Controllers\Panel\Users\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    \Illuminate\Support\Facades\Auth::loginUsingId(30);
+    \Illuminate\Support\Facades\Auth::loginUsingId(3);
     return redirect('/organization-panel');
 });
 
@@ -43,5 +43,7 @@ Route::prefix('/organization-panel')->middleware('auth')->group(function () {
         Route::post('/', [DeductionController::class, 'store'])->name('deductions.files.store');
         Route::get('/{file}', [DeductionController::class, 'show'])->name('deductions.files.show');
         Route::get('/{file}/export', [DeductionController::class, 'export'])->name('deductions.files.export');
+        Route::post('/deductions/users/employment-status', [DeductionController::class, 'updateUserEmploymentStatus'])->name('deductions.users.employment-status.update');
+        Route::patch('/files/{file}/toggle-status', [DeductionController::class, 'toggleStatus'])->name('deductions.files.toggle-status');
     });
 });

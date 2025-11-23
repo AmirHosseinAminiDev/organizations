@@ -18,4 +18,9 @@ class DeductionItem extends Model
     {
         return $this->belongsTo(DeductionFile::class, 'deduction_file_id');
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'national_code', 'national_code');
+    }
 }
